@@ -98,3 +98,29 @@ add_intList (int_list *intList, int val)
     intList->next = new_list;
     return new_list;
 }
+
+rgb_list *
+create_rgbList (void)
+{
+    return (rgb_list *) calloc (1, sizeof (rgb_list));
+}
+
+void
+free_rgbList (rgb_list *rgbList)
+{
+    if (rgbList->next != NULL)
+        free_rgbList (rgbList->next);
+    rgbList->next = NULL;
+    free (rgbList);
+}
+
+rgb_list *
+add_rgbList (rgb_list *rgbList, char rgb[3])
+{
+    rgb_list *new_list;
+    new_list = create_rgbList ();
+    memcpy (new_list, rgb, 3);
+    new_list->next = rgbList->next;
+    rgbList->next = new_list;
+    return new_list;
+}

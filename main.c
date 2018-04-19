@@ -18,6 +18,7 @@ typedef struct my_error_mgr * my_error_ptr;
 METHODDEF(void) my_error_exit (j_common_ptr cinfo);
 GLOBAL(int) read_JPEG_file (char * filename);
 rgb_list ** clustering(int k, rgb_list *rgbList, int rgbList_len);
+int get_distance_square (rgb_list *list1, rgb_list *list2);
 
 JSAMPLE * image_buffer;	/* Points to large array of R,G,B-order data */
 int image_height;	/* Number of rows in image */
@@ -64,7 +65,33 @@ clustering(int k, rgb_list *rgbList, int rgbList_len)
 
     print_rgbList (rgbList);
 
+    // scan every pixel
+    for (cur_rgbList = rgbList->next; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
+    {
+        for (i = 0; i < k; i++)
+        {
+            get_distance_square (cluster_ary[i], cur_rgbList);
+        }
+    }
+
     return cluster_ary;
+}
+
+int
+get_distance_square (rgb_list *list1, rgb_list *list2)
+{
+    int sum;
+    int diff;
+    diff = list1->r - list2->r;
+    diff = abs (diff);
+    sum = diff * diff;
+    diff = list1->g - list2->g;
+    diff = abs (diff);
+    sum += diff * diff;
+    diff = list1->b - list2->b;
+    diff = abs (diff);
+    sum += diff * diff;
+    return sum;
 }
 
 GLOBAL(int)

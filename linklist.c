@@ -124,3 +124,12 @@ add_rgbList (rgb_list *rgbList, char rgb[3])
     rgbList->next = new_list;
     return new_list;
 }
+
+rgb_list *
+create_rgbList_by_RGB (char rgb[3])
+{
+    rgb_list *new_list;
+    new_list = create_rgbList ();
+    memcpy (new_list, rgb, 3);
+    return new_list;
+}

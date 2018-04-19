@@ -31,10 +31,20 @@ main(int argc, char *argv[])
 {
     char ary[] = {1, 2, 3, 4, 5, 6};
     rgb_list *rgbList;
+    rgb_list **final_ary;
     rgbList = create_rgbList ();
     add_rgbList (rgbList, &ary[0]);
+    add_rgbList (rgbList, &ary[1]);
+    add_rgbList (rgbList, &ary[2]);
     add_rgbList (rgbList, &ary[3]);
-    clustering (2, rgbList->next, 2);
+    final_ary = clustering (2, rgbList->next, 4);
+    int i;
+    printf ("main\n");
+    print_rgbList (rgbList->next);
+    for (i = 0; i < 2; i++)
+    {
+        print_rgbList (final_ary[i]);
+    }
     return 0;
 }
 
@@ -69,13 +79,11 @@ clustering(int k, rgb_list *rgbList, int rgbList_len)
         cur_rgbList = cur_rgbList->next;
     }
 
-    print_rgbList (rgbList);
-
     int min;
     int distance;;
     rgb_list *target_list;
     // scan every pixel
-    for (cur_rgbList = rgbList->next; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
+    for (cur_rgbList = rgbList; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
     {
         target_list = cluster_ary[0];
         min = get_distance_square (cluster_ary[0], cur_rgbList);
@@ -167,13 +175,17 @@ clustering_with_clusterAry (int k, rgb_list **cluster_ary)
                     result = true;
                 }
             }
-            add_rgbList (target_list, (char *) cur_rgbList);
 
-            // remove current element from cur list
-            prev_list->next = cur_rgbList->next;
-            cur_rgbList->next = NULL;
-            free (cur_rgbList);
-            cur_rgbList = prev_list;
+            if (target_list != cluster_ary[scan])
+            {
+                add_rgbList (target_list, (char *) cur_rgbList);
+
+                // remove current element from cur list
+                prev_list->next = cur_rgbList->next;
+                cur_rgbList->next = NULL;
+                free (cur_rgbList);
+                cur_rgbList = prev_list;
+            }
 
             prev_list = cur_rgbList;
         }

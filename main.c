@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <setjmp.h>
 #include <string.h>
 #include <time.h>
@@ -19,6 +20,7 @@ METHODDEF(void) my_error_exit (j_common_ptr cinfo);
 GLOBAL(int) read_JPEG_file (char * filename);
 rgb_list ** clustering(int k, rgb_list *rgbList, int rgbList_len);
 int get_distance_square (rgb_list *list1, rgb_list *list2);
+bool clustering_with_clusterAry (int k, rgb_list **cluster_ary);
 
 JSAMPLE * image_buffer;	/* Points to large array of R,G,B-order data */
 int image_height;	/* Number of rows in image */
@@ -44,10 +46,14 @@ clustering(int k, rgb_list *rgbList, int rgbList_len)
     int rand_index;
     rgb_list **cluster_ary;
     rgb_list *cur_rgbList;
+
+    if (k <= 0)
+        return NULL;
+
     cur_rgbList = rgbList;
 
     cluster_ary = (rgb_list **) calloc (k, sizeof (rgb_list *));
-    
+
     srand (time (NULL));
 
     // init center point
@@ -65,16 +71,114 @@ clustering(int k, rgb_list *rgbList, int rgbList_len)
 
     print_rgbList (rgbList);
 
+    int min;
+    int distance;;
+    rgb_list *target_list;
     // scan every pixel
     for (cur_rgbList = rgbList->next; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
     {
-        for (i = 0; i < k; i++)
+        target_list = cluster_ary[0];
+        min = get_distance_square (cluster_ary[0], cur_rgbList);
+        for (i = 1; i < k; i++)
         {
-            get_distance_square (cluster_ary[i], cur_rgbList);
+            distance = get_distance_square (cluster_ary[i], cur_rgbList);
+            if (distance < min)
+            {
+                target_list = cluster_ary[i];
+                min = distance;
+            }
         }
+        add_rgbList (target_list, (char *) cur_rgbList);
     }
 
+    while (clustering_with_clusterAry (k, cluster_ary));
+
     return cluster_ary;
+}
+
+bool
+clustering_with_clusterAry (int k, rgb_list **cluster_ary)
+{
+    int i;
+    int list_len;
+    rgb_list *cur_rgbList;
+    rgb_list **scanList_ary;
+    bool result;
+    result = false;
+
+    scanList_ary = (rgb_list **) calloc (k, sizeof (rgb_list *));
+
+    // reset center point
+    for (i = 0; i < k; i++)
+    {
+        scanList_ary[i] = cluster_ary[i]->next;
+        memset (cluster_ary[i], 0, 3);
+        list_len = 0;
+        for (cur_rgbList = cluster_ary[i]->next; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
+        {
+            cluster_ary[i]->r += cur_rgbList->r;
+            cluster_ary[i]->g += cur_rgbList->g;
+            cluster_ary[i]->b += cur_rgbList->b;
+            list_len++;
+        }
+        cluster_ary[i]->r /= list_len;
+        cluster_ary[i]->g /= list_len;
+        cluster_ary[i]->b /= list_len;
+    }
+
+    int min;
+    int scan;
+    int distance;
+    rgb_list *target_list;
+    rgb_list *prev_list;
+    prev_list = NULL;
+    for (scan = 0; scan < k; scan++)
+    {
+        // find prev list
+        for (cur_rgbList = cluster_ary[scan]; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
+        {
+            if (cur_rgbList->next == scanList_ary[scan])
+            {
+                prev_list = cur_rgbList;
+                break;
+            }
+        }
+
+        if (prev_list == NULL)
+        {
+            printf ("something error, exit.\n");
+            exit(1);
+        }
+
+        // categorize each list
+        for (cur_rgbList = scanList_ary[scan]; cur_rgbList != NULL; cur_rgbList = cur_rgbList->next)
+        {
+            target_list = cluster_ary[scan];
+            min = get_distance_square (cluster_ary[scan], cur_rgbList);
+            for (i = 0; i < k; i++)
+            {
+                if (i == scan)
+                    continue;
+                distance = get_distance_square (cluster_ary[i], cur_rgbList);
+                if (distance < min)
+                {
+                    target_list = cluster_ary[i];
+                    min = distance;
+                    result = true;
+                }
+            }
+            add_rgbList (target_list, (char *) cur_rgbList);
+
+            // remove current element from cur list
+            prev_list->next = cur_rgbList->next;
+            cur_rgbList->next = NULL;
+            free (cur_rgbList);
+            cur_rgbList = prev_list;
+
+            prev_list = cur_rgbList;
+        }
+    }
+    return result;
 }
 
 int
@@ -97,67 +201,67 @@ get_distance_square (rgb_list *list1, rgb_list *list2)
 GLOBAL(int)
 read_JPEG_file (char * filename)
 {
-  struct jpeg_decompress_struct cinfo;
-  struct my_error_mgr jerr;
-  FILE * infile;		/* source file */
-  JSAMPARRAY buffer;		/* Output row buffer */
-  int row_stride;		/* physical row width in output buffer */
-  if ((infile = fopen(filename, "rb")) == NULL) {
-    fprintf(stderr, "can't open %s\n", filename);
-    return 0;
-  }
-
-  /* Step 1: allocate and initialize JPEG decompression object */
-  cinfo.err = jpeg_std_error(&jerr.pub);
-  jerr.pub.error_exit = my_error_exit;
-  if (setjmp(jerr.setjmp_buffer)) {
-    jpeg_destroy_decompress(&cinfo);
-    fclose(infile);
-    return 0;
-  }
-  jpeg_create_decompress(&cinfo);
-
-  /* Step 2: specify data source (eg, a file) */
-
-  jpeg_stdio_src(&cinfo, infile);
-
-  /* Step 3: read file parameters with jpeg_read_header() */
-
-  (void) jpeg_read_header(&cinfo, TRUE);
-
-  /* Step 4: set parameters for decompression */
-
-  /* Step 5: Start decompressor */
-
-  (void) jpeg_start_decompress(&cinfo);
-  row_stride = cinfo.output_width * cinfo.output_components;
-  buffer = (*cinfo.mem->alloc_sarray)
-		((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
-
-  /* Step 6: while (scan lines remain to be read) */
-  /*           jpeg_read_scanlines(...); */
-
-  while (cinfo.output_scanline < cinfo.output_height) {
-    (void) jpeg_read_scanlines(&cinfo, buffer, 1);
-    int i;
-    for (i = 0; i < row_stride; i++)
-    {
-        printf("%d ", buffer[0][i]);
+    struct jpeg_decompress_struct cinfo;
+    struct my_error_mgr jerr;
+    FILE * infile;		/* source file */
+    JSAMPARRAY buffer;		/* Output row buffer */
+    int row_stride;		/* physical row width in output buffer */
+    if ((infile = fopen(filename, "rb")) == NULL) {
+        fprintf(stderr, "can't open %s\n", filename);
+        return 0;
     }
-    printf ("\n");
-  }
 
-  /* Step 7: Finish decompression */
+    /* Step 1: allocate and initialize JPEG decompression object */
+    cinfo.err = jpeg_std_error(&jerr.pub);
+    jerr.pub.error_exit = my_error_exit;
+    if (setjmp(jerr.setjmp_buffer)) {
+        jpeg_destroy_decompress(&cinfo);
+        fclose(infile);
+        return 0;
+    }
+    jpeg_create_decompress(&cinfo);
 
-  (void) jpeg_finish_decompress(&cinfo);
+    /* Step 2: specify data source (eg, a file) */
 
-  /* Step 8: Release JPEG decompression object */
+    jpeg_stdio_src(&cinfo, infile);
 
-  jpeg_destroy_decompress(&cinfo);
+    /* Step 3: read file parameters with jpeg_read_header() */
 
-  fclose(infile);
+    (void) jpeg_read_header(&cinfo, TRUE);
 
-  return 1;
+    /* Step 4: set parameters for decompression */
+
+    /* Step 5: Start decompressor */
+
+    (void) jpeg_start_decompress(&cinfo);
+    row_stride = cinfo.output_width * cinfo.output_components;
+    buffer = (*cinfo.mem->alloc_sarray)
+        ((j_common_ptr) &cinfo, JPOOL_IMAGE, row_stride, 1);
+
+    /* Step 6: while (scan lines remain to be read) */
+    /*           jpeg_read_scanlines(...); */
+
+    while (cinfo.output_scanline < cinfo.output_height) {
+        (void) jpeg_read_scanlines(&cinfo, buffer, 1);
+        int i;
+        for (i = 0; i < row_stride; i++)
+        {
+            printf("%d ", buffer[0][i]);
+        }
+        printf ("\n");
+    }
+
+    /* Step 7: Finish decompression */
+
+    (void) jpeg_finish_decompress(&cinfo);
+
+    /* Step 8: Release JPEG decompression object */
+
+    jpeg_destroy_decompress(&cinfo);
+
+    fclose(infile);
+
+    return 1;
 }
 
 /*
@@ -167,13 +271,13 @@ read_JPEG_file (char * filename)
 METHODDEF(void)
 my_error_exit (j_common_ptr cinfo)
 {
-  /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
-  my_error_ptr myerr = (my_error_ptr) cinfo->err;
+    /* cinfo->err really points to a my_error_mgr struct, so coerce pointer */
+    my_error_ptr myerr = (my_error_ptr) cinfo->err;
 
-  /* Always display the message. */
-  /* We could postpone this until after returning, if we chose. */
-  (*cinfo->err->output_message) (cinfo);
+    /* Always display the message. */
+    /* We could postpone this until after returning, if we chose. */
+    (*cinfo->err->output_message) (cinfo);
 
-  /* Return control to the setjmp point */
-  longjmp(myerr->setjmp_buffer, 1);
+    /* Return control to the setjmp point */
+    longjmp(myerr->setjmp_buffer, 1);
 }

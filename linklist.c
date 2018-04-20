@@ -108,10 +108,14 @@ create_rgbList (void)
 void
 free_rgbList (rgb_list *rgbList)
 {
-    if (rgbList->next != NULL)
-        free_rgbList (rgbList->next);
-    rgbList->next = NULL;
-    free (rgbList);
+    rgb_list *nextList;
+
+    do
+    {
+        nextList = rgbList->next;
+        free (rgbList);
+        rgbList = nextList;
+    } while (rgbList != NULL);
 }
 
 rgb_list *
@@ -137,16 +141,14 @@ create_rgbList_by_RGB (unsigned char rgb[3])
 rgb_list *
 reverse_rgbList (rgb_list *rgbList, rgb_list *prevList)
 {
-    rgb_list *result;
-    if (rgbList->next == NULL)
+    rgb_list *cur_list;
+
+    do
     {
+        cur_list = rgbList->next;
         rgbList->next = prevList;
-        return rgbList;
-    }
-    else
-    {
-        result = reverse_rgbList (rgbList->next, rgbList);
-        rgbList->next = prevList;
-        return result;
-    }
+        prevList = rgbList;
+        rgbList = cur_list;
+    } while (cur_list != NULL);
+    return prevList;
 }

@@ -4,7 +4,7 @@
 #include <setjmp.h>
 #include <string.h>
 #include <time.h>
-#include <version.h>
+#include "version.h"
 #include "linklist.h"
 #include "display.h"
 #include "jpeglib.h"

@@ -115,7 +115,7 @@ free_rgbList (rgb_list *rgbList)
 }
 
 rgb_list *
-add_rgbList (rgb_list *rgbList, char rgb[3])
+add_rgbList (rgb_list *rgbList, unsigned char rgb[3])
 {
     rgb_list *new_list;
     new_list = create_rgbList ();
@@ -126,7 +126,7 @@ add_rgbList (rgb_list *rgbList, char rgb[3])
 }
 
 rgb_list *
-create_rgbList_by_RGB (char rgb[3])
+create_rgbList_by_RGB (unsigned char rgb[3])
 {
     rgb_list *new_list;
     new_list = create_rgbList ();

@@ -1,0 +1,6 @@
+*.o
+*.swp
+tags
+kmeans
+.gdb_history
+peda-session*

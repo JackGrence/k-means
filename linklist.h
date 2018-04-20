@@ -52,5 +52,6 @@ rgb_list *create_rgbList (void);
 rgb_list *create_rgbList_by_RGB (unsigned char rgb[3]);
 void free_rgbList (rgb_list *rgbList);
 rgb_list *add_rgbList (rgb_list *rgbList, unsigned char rgb[3]);
+rgb_list *reverse_rgbList (rgb_list *rgbList, rgb_list *prevList);
 
 #endif

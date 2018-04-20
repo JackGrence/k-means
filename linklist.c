@@ -133,3 +133,20 @@ create_rgbList_by_RGB (unsigned char rgb[3])
     memcpy (new_list, rgb, 3);
     return new_list;
 }
+
+rgb_list *
+reverse_rgbList (rgb_list *rgbList, rgb_list *prevList)
+{
+    rgb_list *result;
+    if (rgbList->next == NULL)
+    {
+        rgbList->next = prevList;
+        return rgbList;
+    }
+    else
+    {
+        result = reverse_rgbList (rgbList->next, rgbList);
+        rgbList->next = prevList;
+        return result;
+    }
+}
